@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  mysql_db:
+    image: mysql:8.0
+    container_name: betalent_mysql
+    environment:
+      MYSQL_DATABASE: betalent_api
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  gateways_mock:
+    image: matheusprotzen/gateways-mock
+    container_name: betalent_gateways
+    ports:
+      - "3001:3001"
+      - "3002:3002"
+    # Se quiser testar SEM autenticação depois, basta descomentar a linha abaixo:
+    # environment:
+    #   - REMOVE_AUTH=true
+
+volumes:
+  mysql_data:
