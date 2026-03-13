@@ -10,26 +10,23 @@ export default class TransactionsController {
 
     const result = await this.transactionService.processCheckout(payload)
 
-    if (result.error) {
-      return response.status(500).send({ error: result.error })
-    }
-
-    if (!result.success) {
-      return response.status(400).send({
-        error: 'Pagamento recusado em todos os gateways.',
-        transactionId: result.transaction?.id,
-      })
-    }
-
-    return response.status(201).send({
-      message: 'Compra realizada com sucesso!',
-      transactionId: result.transaction?.id,
-      status: result.transaction?.status,
-    })
+    return response.created(result)
   }
 
   public async index({ response }: HttpContext) {
-    const transactions = await this.transactionService.listAll()
+    const transactions = await this.transactionService.findMany()
     return response.ok(transactions)
+  }
+
+  public async refund({ response, request }: HttpContext) {
+    const result = await this.transactionService.refund(request.param('id'))
+
+    return response.ok(result)
+  }
+
+  async findUnique({ request, response }: HttpContext) {
+    const result = await this.transactionService.findUniqueById(request.param('id'))
+
+    return response.ok(result)
   }
 }

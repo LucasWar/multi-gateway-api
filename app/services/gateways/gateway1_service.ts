@@ -38,7 +38,14 @@ export class Gateway1Service implements GatewayContract {
 
   public async refund(transactionId: string): Promise<GatewayResponse> {
     try {
-      await axios.post(`${this.baseURL}/transactions/${transactionId}/charge_back`)
+      const token = await this.getToken()
+      await axios.post(
+        `${this.baseURL}/transactions/${transactionId}/charge_back`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      )
       return { success: true }
     } catch (error) {
       return { success: false, errorMessage: 'Erro no estorno do Gateway 1' }

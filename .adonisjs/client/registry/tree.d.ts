@@ -5,13 +5,11 @@ export interface ApiDefinition {
   transactions: {
     store: typeof routes['transactions.store']
     index: typeof routes['transactions.index']
+    findUnique: typeof routes['transactions.find_unique']
+    refund: typeof routes['transactions.refund']
   }
   auth: {
     login: typeof routes['auth.login']
-  }
-  users: {
-    index: typeof routes['users.index']
-    store: typeof routes['users.store']
   }
   products: {
     index: typeof routes['products.index']
@@ -20,9 +18,20 @@ export interface ApiDefinition {
     update: typeof routes['products.update']
     destroy: typeof routes['products.destroy']
   }
+  users: {
+    index: typeof routes['users.index']
+    store: typeof routes['users.store']
+    show: typeof routes['users.show']
+    update: typeof routes['users.update']
+    destroy: typeof routes['users.destroy']
+  }
   gateways: {
     index: typeof routes['gateways.index']
     updateStatus: typeof routes['gateways.update_status']
     updatePriority: typeof routes['gateways.update_priority']
+  }
+  clients: {
+    index: typeof routes['clients.index']
+    findUnique: typeof routes['clients.find_unique']
   }
 }

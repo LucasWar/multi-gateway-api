@@ -59,4 +59,8 @@ export class GatewayService {
       data: gateway,
     }
   }
+
+  async listAllActive() {
+    return await Gateway.query().where('isActive', true).orderBy('priority', 'asc')
+  }
 }
