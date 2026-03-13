@@ -1,4 +1,3 @@
-// database/seeders/initial_data_seeder.ts
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
 import Gateway from '#models/gateway'
 import Product from '#models/product'
