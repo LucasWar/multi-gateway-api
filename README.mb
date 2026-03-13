@@ -1,50 +1,115 @@
-# Payment Processing API
+<!-- HEADER -->
 
-API de processamento de pagamentos desenvolvida como teste técnico.
-O sistema simula uma plataforma capaz de processar compras utilizando **múltiplos gateways de pagamento**, com **failover automático** caso algum gateway falhe.
+<h1 align="center">
+Payment Processing API
+</h1>
 
-O projeto foi desenvolvido com foco em:
+<p align="center">
+API de processamento de pagamentos desenvolvida como teste técnico.<br>
+Simula uma plataforma capaz de processar compras utilizando <b>múltiplos gateways</b> com <b>failover automático</b>.
+</p>
 
-* Arquitetura limpa e organizada
-* Separação de responsabilidades
-* Testabilidade
-* Facilidade de execução e avaliação
+<p align="center">
+
+<img src="https://img.shields.io/badge/Node.js-18+-green">
+<img src="https://img.shields.io/badge/Framework-AdonisJS-purple">
+<img src="https://img.shields.io/badge/Database-MySQL-blue">
+<img src="https://img.shields.io/badge/Tests-Japa-orange">
+<img src="https://img.shields.io/badge/Docker-ready-blue">
+
+</p>
 
 ---
 
-# 📌 Visão Geral
+<h2>📚 Sumário</h2>
 
+<ul>
+<li><a href="#visao">Visão Geral</a></li>
+<li><a href="#tech">Tecnologias</a></li>
+<li><a href="#arquitetura">Arquitetura</a></li>
+<li><a href="#fluxo">Fluxo de Pagamento</a></li>
+<li><a href="#quick">Quick Start</a></li>
+<li><a href="#install">Instalação Completa</a></li>
+<li><a href="#seeds">Seeds</a></li>
+<li><a href="#auth">Autenticação</a></li>
+<li><a href="#rbac">RBAC</a></li>
+<li><a href="#routes">Rotas</a></li>
+<li><a href="#tests">Testes</a></li>
+<li><a href="#architecture-decisions">Decisões de Arquitetura</a></li>
+</ul>
+
+---
+
+<h2 id="visao">📌 Visão Geral</h2>
+
+<p>
 A API permite:
+</p>
 
-* Criar transações de compra
-* Processar pagamentos usando múltiplos gateways
-* Realizar reembolsos
-* Gerenciar produtos
-* Gerenciar gateways
-* Autenticar usuários
-* Controlar permissões via RBAC (Role Based Access Control)
+<ul>
+<li>Criar transações de compra</li>
+<li>Processar pagamentos utilizando múltiplos gateways</li>
+<li>Realizar reembolsos</li>
+<li>Gerenciar produtos</li>
+<li>Gerenciar gateways</li>
+<li>Autenticar usuários</li>
+<li>Controlar permissões via <b>RBAC</b></li>
+</ul>
 
-Durante o processamento de pagamento, o sistema tenta utilizar os gateways **respeitando a prioridade configurada**.
-Caso um gateway falhe, o sistema tenta automaticamente o próximo disponível.
-
----
-
-# 🧱 Tecnologias Utilizadas
-
-* Node.js
-* AdonisJS
-* MySQL
-* Docker
-* Japa (testes)
-* Sinon (mocking em testes)
+<p>
+Durante o processamento de pagamento, o sistema utiliza os gateways respeitando a <b>prioridade configurada</b>.
+Caso um gateway falhe, o sistema tenta automaticamente o <b>próximo gateway disponível</b>.
+</p>
 
 ---
 
-# 🏗 Arquitetura do Projeto
+<h2 id="tech">🧱 Tecnologias Utilizadas</h2>
 
-O projeto segue uma arquitetura em camadas para separar responsabilidades:
+<table>
+<tr>
+<th>Tecnologia</th>
+<th>Descrição</th>
+</tr>
 
-```
+<tr>
+<td>Node.js</td>
+<td>Runtime JavaScript</td>
+</tr>
+
+<tr>
+<td>AdonisJS</td>
+<td>Framework backend</td>
+</tr>
+
+<tr>
+<td>MySQL</td>
+<td>Banco de dados relacional</td>
+</tr>
+
+<tr>
+<td>Docker</td>
+<td>Containerização da aplicação</td>
+</tr>
+
+<tr>
+<td>Japa</td>
+<td>Framework de testes</td>
+</tr>
+
+<tr>
+<td>Sinon</td>
+<td>Mocking e stubs para testes</td>
+</tr>
+
+</table>
+
+---
+
+<h2 id="arquitetura">🏗 Arquitetura do Projeto</h2>
+
+<p>O projeto segue uma arquitetura em camadas:</p>
+
+<pre>
 Controller
    ↓
 Service
@@ -52,37 +117,35 @@ Service
 Model
    ↓
 Database
-```
+</pre>
 
-### Controllers
+<h3>Controllers</h3>
 
-Responsáveis por:
+<ul>
+<li>Recebem requisições HTTP</li>
+<li>Validam dados</li>
+<li>Delegam lógica para os services</li>
+</ul>
 
-* Receber requisições HTTP
-* Validar dados
-* Delegar lógica para os services
+<h3>Services</h3>
 
-### Services
+<p>Contêm as <b>regras de negócio</b> da aplicação.</p>
 
-Contêm as **regras de negócio do sistema**.
+<ul>
+<li>Checkout</li>
+<li>Fallback entre gateways</li>
+<li>Regras de reembolso</li>
+</ul>
 
-Exemplos:
+<h3>Models</h3>
 
-* Processamento de checkout
-* Lógica de fallback entre gateways
-* Regras de reembolso
-
-### Models
-
-Representam as entidades do banco de dados e utilizam o ORM do AdonisJS para persistência.
+<p>Representam entidades do banco utilizando o ORM do AdonisJS.</p>
 
 ---
 
-# 💳 Processamento de Pagamento
+<h2 id="fluxo">💳 Fluxo de Processamento de Pagamento</h2>
 
-Fluxo simplificado de checkout:
-
-```
+<pre>
 Cliente envia requisição
         ↓
 Sistema busca produtos
@@ -101,356 +164,305 @@ Sim            Não
 ↓               ↓
 Tenta próximo   Transação criada
 gateway
-```
+</pre>
 
-Esse mecanismo garante **maior resiliência no processamento de pagamentos**.
-
----
-
-# 📋 Requisitos
-
-Para executar o projeto você precisa ter instalado:
-
-* Node.js 18+
-* Docker
-* Docker Compose
-* MySQL
+<p>
+Esse mecanismo garante <b>maior resiliência no processamento de pagamentos</b>.
+</p>
 
 ---
 
-# 🚀 Quick Start
+<h2>📋 Requisitos</h2>
 
-Para rodar o projeto rapidamente:
+<ul>
+<li>Node.js 18+</li>
+<li>Docker</li>
+<li>Docker Compose</li>
+<li>MySQL</li>
+</ul>
 
-```
+---
+
+<h2 id="quick">🚀 Quick Start</h2>
+
+<pre>
 docker-compose up -d
+
 npm install
+
 node ace migration:run
+
 node ace db:seed
+
 node ace serve --watch
-```
+</pre>
 
-A API estará disponível em:
+<p>A API estará disponível em:</p>
 
-```
+<pre>
 http://localhost:3333
-```
+</pre>
 
 ---
 
-# ⚙️ Instalação Completa
+<h2 id="install">⚙️ Instalação Completa</h2>
 
-### 1. Clonar o repositório
+<h3>1. Clonar o repositório</h3>
 
-```
-git clone <repo-url>
+<pre>
+git clone &lt;repo-url&gt;
 cd payment-api
-```
+</pre>
 
-### 2. Instalar dependências
+<h3>2. Instalar dependências</h3>
 
-```
+<pre>
 npm install
-```
+</pre>
 
-### 3. Configurar variáveis de ambiente
+<h3>3. Configurar ambiente</h3>
 
-Copie o arquivo de exemplo:
-
-```
+<pre>
 cp .env.example .env
-```
+</pre>
 
-Exemplo de configuração:
+Exemplo:
 
-```
+<pre>
 DB_DATABASE=betalent_api
 DB_USER=root
 DB_PASSWORD=root
-```
+</pre>
 
-### 4. Subir containers
+<h3>4. Subir containers</h3>
 
-```
+<pre>
 docker-compose up -d
-```
+</pre>
 
-### 5. Rodar migrations
+<h3>5. Rodar migrations</h3>
 
-```
+<pre>
 node ace migration:run
-```
+</pre>
 
-### 6. Popular banco com dados iniciais
+<h3>6. Rodar seeds</h3>
 
-```
+<pre>
 node ace db:seed
-```
+</pre>
 
-### 7. Iniciar servidor
+<h3>7. Iniciar servidor</h3>
 
-```
+<pre>
 node ace serve --watch
-```
+</pre>
 
 ---
 
-# 🌱 Seeds (Dados Iniciais)
+<h2 id="seeds">🌱 Seeds</h2>
 
-O projeto possui seeders responsáveis por popular o banco com dados necessários para testes.
+Seeders disponíveis:
 
-## Seeders disponíveis
+<ul>
+<li><code>initial_datum_seeder</code></li>
+<li><code>user_seeder</code></li>
+</ul>
 
-* `initial_datum_seeder`
-* `user_seeder`
+<h3>Gateways criados</h3>
 
----
+<table>
 
-## initial_datum_seeder
+<tr>
+<th>Nome</th>
+<th>Prioridade</th>
+<th>Ativo</th>
+</tr>
 
-Cria dados iniciais necessários para funcionamento do sistema:
+<tr>
+<td>Gateway 1</td>
+<td>1</td>
+<td>true</td>
+</tr>
 
-### Gateways de pagamento
+<tr>
+<td>Gateway 2</td>
+<td>2</td>
+<td>true</td>
+</tr>
 
-| Nome      | Prioridade | Ativo |
-| --------- | ---------- | ----- |
-| Gateway 1 | 1          | true  |
-| Gateway 2 | 2          | true  |
-
-A **prioridade** determina a ordem em que os gateways serão utilizados.
-
----
-
-### Produtos
-
-Produtos de exemplo são criados para facilitar testes da rota de checkout.
-
-Esses produtos permitem testar rapidamente o fluxo:
-
-```
-POST /checkout
-```
+</table>
 
 ---
 
-## user_seeder
+<h3>Usuários de teste</h3>
 
-Cria usuários de teste com diferentes níveis de permissão.
+<table>
 
-| Email                                       | Role    |
-| ------------------------------------------- | ------- |
-| [admin@test.com](mailto:admin@test.com)     | ADMIN   |
-| [manager@test.com](mailto:manager@test.com) | MANAGER |
-| [finance@test.com](mailto:finance@test.com) | FINANCE |
-| [user@test.com](mailto:user@test.com)       | USER    |
+<tr>
+<th>Email</th>
+<th>Role</th>
+</tr>
 
-Senha padrão para todos:
+<tr>
+<td>admin@test.com</td>
+<td>ADMIN</td>
+</tr>
 
-```
+<tr>
+<td>manager@test.com</td>
+<td>MANAGER</td>
+</tr>
+
+<tr>
+<td>finance@test.com</td>
+<td>FINANCE</td>
+</tr>
+
+<tr>
+<td>user@test.com</td>
+<td>USER</td>
+</tr>
+
+</table>
+
+Senha padrão:
+
+<pre>
 123456
-```
-
-Esses usuários podem ser utilizados para autenticação na API.
+</pre>
 
 ---
 
-# 🔐 Autenticação
+<h2 id="auth">🔐 Autenticação</h2>
 
-O sistema utiliza autenticação baseada em token.
+<p>Login:</p>
 
-### Login
-
-```
+<pre>
 POST /login
-```
+</pre>
 
-Exemplo de body:
+Body:
 
-```
+<pre>
 {
   "email": "admin@test.com",
   "password": "123456"
 }
-```
+</pre>
 
 Resposta:
 
-```
+<pre>
 {
   "token": "jwt_token"
 }
-```
+</pre>
 
-Para acessar rotas protegidas, envie o token no header:
+Header necessário:
 
-```
+<pre>
 Authorization: Bearer TOKEN
-```
+</pre>
 
 ---
 
-# 🔑 Controle de Permissões (RBAC)
+<h2 id="rbac">🔑 Controle de Permissões (RBAC)</h2>
 
-Papéis disponíveis no sistema:
+<table>
 
-| Role    | Permissões                                 |
-| ------- | ------------------------------------------ |
-| ADMIN   | acesso total                               |
-| MANAGER | gerenciar produtos e visualizar transações |
-| FINANCE | gerenciar produtos                         |
-| USER    | acesso restrito                            |
+<tr>
+<th>Role</th>
+<th>Permissões</th>
+</tr>
+
+<tr>
+<td>ADMIN</td>
+<td>Acesso total</td>
+</tr>
+
+<tr>
+<td>MANAGER</td>
+<td>Gerenciar produtos e visualizar transações</td>
+</tr>
+
+<tr>
+<td>FINANCE</td>
+<td>Gerenciar produtos</td>
+</tr>
+
+<tr>
+<td>USER</td>
+<td>Acesso restrito</td>
+</tr>
+
+</table>
 
 ---
 
-# 📡 Rotas da API
+<h2 id="routes">📡 Rotas da API</h2>
 
-## Autenticação
+<h3>Checkout</h3>
 
-### Login
-
-```
-POST /login
-```
-
----
-
-## Checkout
-
-### Criar compra
-
-```
+<pre>
 POST /checkout
-```
+</pre>
 
-Body:
+<h3>Transações</h3>
 
-```
-{
-  "name": "Cliente",
-  "email": "cliente@email.com",
-  "cardNumber": "5569000000006063",
-  "cvv": "123",
-  "products": [
-    {
-      "productId": 1,
-      "quantity": 2
-    }
-  ]
-}
-```
-
----
-
-## Transações
-
-### Listar transações
-
-```
+<pre>
 GET /transactions
-```
-
-Permissão:
-
-```
-MANAGER
-```
-
----
-
-### Realizar reembolso
-
-```
 POST /transactions/:id/refund
-```
+</pre>
 
-Permissão:
+<h3>Produtos</h3>
 
-```
-ADMIN
-```
-
----
-
-## Produtos
-
-```
+<pre>
 GET /products
 POST /products
 PUT /products/:id
 DELETE /products/:id
-```
+</pre>
 
-Permissões:
+<h3>Gateways</h3>
 
-```
-MANAGER
-FINANCE
-```
-
----
-
-## Gateways
-
-```
+<pre>
 GET /gateways
 POST /gateways/:id/status
 POST /gateways/:id/priority
-```
-
-Permissão:
-
-```
-ADMIN
-```
+</pre>
 
 ---
 
-## Clientes
+<h2 id="tests">🧪 Testes</h2>
 
-```
-GET /clients
-```
+<p>Executar testes:</p>
 
----
-
-# 🧪 Testes
-
-Os testes automatizados foram implementados utilizando **Japa**.
-
-Para executar os testes:
-
-```
+<pre>
 node ace test
-```
+</pre>
 
-Os testes utilizam:
+Ferramentas utilizadas:
 
-* Japa
-* Sinon
+<ul>
+<li>Japa</li>
+<li>Sinon</li>
+</ul>
 
-Durante a execução dos testes o banco de dados é isolado utilizando **transações globais**, garantindo que qualquer dado criado seja automaticamente revertido ao final de cada teste.
-
-Isso evita poluição do banco e garante consistência nos resultados.
+Os testes utilizam <b>transações globais</b> para garantir isolamento do banco.
 
 ---
 
-# 🧠 Decisões de Arquitetura
+<h2 id="architecture-decisions">🧠 Decisões de Arquitetura</h2>
 
-Algumas decisões importantes tomadas no projeto:
+<h3>Service Layer</h3>
 
-### Service Layer
+<p>A lógica de negócio foi isolada em services.</p>
 
-A lógica de negócio foi isolada em **services**, separando responsabilidades da camada HTTP.
+<h3>Gateway Factory</h3>
 
-### GatewayFactory
+<p>Permite adicionar novos gateways sem alterar a lógica principal.</p>
 
-A utilização de uma factory permite adicionar novos gateways facilmente sem modificar a lógica principal do sistema.
+<h3>Transações de Banco</h3>
 
-### Transações de banco
-
-O uso de transações garante consistência ao criar:
-
-* transação
-* itens da transação
-
-Se algum passo falhar, o banco executa rollback automaticamente.
+<p>Garantem consistência ao criar transações e itens da transação.</p>
