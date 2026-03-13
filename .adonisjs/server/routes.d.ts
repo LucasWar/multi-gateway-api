@@ -4,8 +4,8 @@ type ParamValue = string | number | bigint | boolean
 
 export type ScannedRoutes = {
   ALL: {
-    'transactions.store': { paramsTuple?: []; params?: {} }
     'auth.login': { paramsTuple?: []; params?: {} }
+    'transactions.store': { paramsTuple?: []; params?: {} }
     'transactions.index': { paramsTuple?: []; params?: {} }
     'transactions.find_unique': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'transactions.refund': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
@@ -26,8 +26,8 @@ export type ScannedRoutes = {
     'clients.find_unique': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
   }
   POST: {
-    'transactions.store': { paramsTuple?: []; params?: {} }
     'auth.login': { paramsTuple?: []; params?: {} }
+    'transactions.store': { paramsTuple?: []; params?: {} }
     'transactions.refund': { paramsTuple: [ParamValue]; params: {'id': ParamValue} }
     'products.store': { paramsTuple?: []; params?: {} }
     'users.store': { paramsTuple?: []; params?: {} }

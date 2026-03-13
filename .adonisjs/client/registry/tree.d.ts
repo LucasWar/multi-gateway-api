@@ -2,14 +2,14 @@
 import type { routes } from './index.ts'
 
 export interface ApiDefinition {
+  auth: {
+    login: typeof routes['auth.login']
+  }
   transactions: {
     store: typeof routes['transactions.store']
     index: typeof routes['transactions.index']
     findUnique: typeof routes['transactions.find_unique']
     refund: typeof routes['transactions.refund']
-  }
-  auth: {
-    login: typeof routes['auth.login']
   }
   products: {
     index: typeof routes['products.index']

@@ -6,17 +6,17 @@ import type { ApiDefinition } from './tree.d.ts'
 const placeholder: any = {}
 
 const routes = {
-  'transactions.store': {
-    methods: ["POST"],
-    pattern: '/checkout',
-    tokens: [{"old":"/checkout","type":0,"val":"checkout","end":""}],
-    types: placeholder as Registry['transactions.store']['types'],
-  },
   'auth.login': {
     methods: ["POST"],
     pattern: '/login',
     tokens: [{"old":"/login","type":0,"val":"login","end":""}],
     types: placeholder as Registry['auth.login']['types'],
+  },
+  'transactions.store': {
+    methods: ["POST"],
+    pattern: '/checkout',
+    tokens: [{"old":"/checkout","type":0,"val":"checkout","end":""}],
+    types: placeholder as Registry['transactions.store']['types'],
   },
   'transactions.index': {
     methods: ["GET","HEAD"],
