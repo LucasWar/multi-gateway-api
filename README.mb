@@ -1,0 +1,433 @@
+# Payment Processing API
+
+API de processamento de pagamentos desenvolvida como teste técnico.
+O sistema simula uma plataforma capaz de processar compras utilizando múltiplos gateways de pagamento com mecanismo de **failover automático**.
+
+---
+
+# Visão Geral
+
+Esta API permite:
+
+* Criar transações de compra
+* Processar pagamentos utilizando múltiplos gateways
+* Realizar reembolsos
+* Gerenciar produtos
+* Gerenciar gateways
+* Autenticar usuários
+* Controlar permissões por papel (RBAC)
+
+O sistema tenta processar pagamentos em **múltiplos gateways**, respeitando a prioridade configurada.
+
+Caso um gateway falhe, o sistema tenta automaticamente o próximo.
+
+---
+
+# Tecnologias Utilizadas
+
+* Node.js
+* AdonisJS
+* MySQL
+* Docker
+* Japa (testes)
+* Sinon (mocking em testes)
+
+---
+
+# Arquitetura do Projeto
+
+O projeto segue uma arquitetura baseada em camadas:
+
+```
+Controller
+↓
+Service
+↓
+Model
+↓
+Database
+```
+
+Responsabilidades:
+
+Controllers
+
+* Recebem requisições HTTP
+* Validam dados
+* Chamam services
+
+Services
+
+* Contêm regras de negócio
+* Coordenam chamadas entre entidades
+
+Models
+
+* Representam entidades do banco
+* Gerenciam persistência via ORM
+
+---
+
+# Funcionalidade Principal: Processamento de Pagamento
+
+Fluxo de checkout:
+
+1. Cliente envia requisição de compra
+2. Sistema busca os produtos
+3. Calcula o valor total
+4. Cria/recupera cliente
+5. Busca gateways ativos
+6. Tenta processar pagamento
+7. Caso falhe, tenta o próximo gateway
+8. Cria registro de transação
+
+Fluxo simplificado:
+
+```
+checkout
+   ↓
+buscar produtos
+   ↓
+calcular total
+   ↓
+buscar gateways
+   ↓
+tentar gateway 1
+   ↓
+falhou?
+   ↓
+tentar gateway 2
+   ↓
+criar transação
+```
+---
+# Seeds (Dados Iniciais)
+
+O projeto possui seeders responsáveis por popular o banco de dados com dados iniciais necessários para funcionamento e testes da API.
+
+Atualmente existem dois seeders:
+
+initial_datum_seeder
+
+user_seeder
+
+Executar Seeds
+
+Após rodar as migrations, execute:
+
+node ace db:seed
+
+Isso executará todos os seeders registrados.
+
+Caso deseje executar um seeder específico:
+
+node ace db:seed --files="./database/seeders/initial_datum_seeder.ts"
+
+ou
+
+node ace db:seed --files="./database/seeders/user_seeder.ts"
+initial_datum_seeder
+
+Este seeder cria dados iniciais necessários para funcionamento do sistema, como:
+
+Gateways de pagamento
+
+Produtos de exemplo
+
+Esses dados permitem testar o fluxo de checkout sem precisar criar registros manualmente.
+
+Exemplo de dados criados:
+
+Gateways
+Nome	Prioridade	Ativo
+Gateway 1	1	true
+Gateway 2	2	true
+
+A prioridade define qual gateway será tentado primeiro no processamento de pagamentos.
+
+Produtos
+
+Produtos de exemplo são criados para permitir testes rápidos da rota:
+
+POST /checkout
+user_seeder
+
+Este seeder cria usuários de teste com diferentes níveis de permissão para facilitar testes da API.
+
+Usuários criados:
+
+Email	Role
+admin@test.com	ADMIN
+manager@test.com	MANAGER
+finance@test.com	FINANCE
+user@test.com	USER
+
+Senha padrão:
+
+123456
+
+Esses usuários podem ser utilizados para autenticação na rota:
+
+POST /login
+
+Após autenticação, o token retornado deve ser utilizado no header:
+
+Authorization: Bearer TOKEN
+---
+
+# Requisitos
+
+Para executar o projeto você precisa:
+
+* Node.js 18+
+* Docker
+* Docker Compose
+* MySQL
+
+---
+
+# Instalação
+
+Clone o repositório:
+
+```
+git clone <repo>
+cd payment-api
+```
+
+Instale dependências:
+
+```
+npm install
+```
+
+Configure as variáveis de ambiente:
+
+```
+cp .env.example .env
+```
+
+---
+
+# Executando o projeto
+
+Subir containers:
+
+```
+docker-compose up -d
+```
+
+Rodar migrations:
+
+```
+node ace migration:run
+```
+
+Iniciar servidor:
+
+```
+node ace serve --watch
+```
+
+API estará disponível em:
+
+```
+http://localhost:3333
+```
+
+---
+
+# Gateways de Pagamento
+
+O sistema utiliza dois gateways simulados fornecidos pelo desafio técnico.
+
+Os gateways são acessados através de um **GatewayFactory**, permitindo fácil extensão para novos provedores.
+
+Estrutura:
+
+```
+GatewayFactory
+   ↓
+GatewayService
+   ↓
+Gateway Implementation
+```
+
+Cada gateway implementa a interface:
+
+```
+pay()
+refund()
+```
+
+---
+
+# Autenticação
+
+O sistema utiliza autenticação baseada em token.
+
+Fluxo:
+
+```
+POST /login
+↓
+retorna token
+↓
+token enviado no header Authorization
+```
+
+Exemplo:
+
+```
+Authorization: Bearer TOKEN
+```
+
+---
+
+# Controle de Permissões (RBAC)
+
+Papéis disponíveis:
+
+ADMIN
+MANAGER
+FINANCE
+USER
+
+Permissões:
+
+ADMIN
+
+* gerenciar gateways
+* acessar todos endpoints
+
+MANAGER
+
+* visualizar transações
+* gerenciar produtos
+
+FINANCE
+
+* gerenciar produtos
+
+USER
+
+* acesso restrito
+
+---
+
+# Rotas da API
+
+## Autenticação
+
+POST /login
+
+---
+
+## Checkout
+
+POST /checkout
+
+Cria uma nova transação de compra.
+
+Body:
+
+```
+{
+  "name": "Cliente",
+  "email": "cliente@email.com",
+  "cardNumber": "5569000000006063",
+  "cvv": "123",
+  "products": [
+    {
+      "productId": 1,
+      "quantity": 2
+    }
+  ]
+}
+```
+
+---
+
+## Transações
+
+GET /transactions
+
+Lista transações.
+
+Permissão:
+MANAGER
+
+---
+
+POST /transactions/:id/refund
+
+Realiza reembolso.
+
+Permissão:
+ADMIN
+
+---
+
+## Produtos
+
+GET /products
+POST /products
+PUT /products/:id
+DELETE /products/:id
+
+Permissão:
+MANAGER ou FINANCE
+
+---
+
+## Gateways
+
+GET /gateways
+POST /gateways/:id/status
+POST /gateways/:id/priority
+
+Permissão:
+ADMIN
+
+---
+
+## Clientes
+
+GET /clients
+
+---
+
+# Testes
+
+Executar testes:
+
+```
+node ace test
+```
+
+Os testes utilizam:
+
+* Japa
+* Sinon
+
+Durante os testes, o banco é isolado usando **transações globais**, garantindo que dados criados sejam automaticamente revertidos.
+
+---
+
+# Decisões de Arquitetura
+
+Algumas decisões importantes:
+
+GatewayFactory
+
+* permite adicionar novos gateways sem alterar a lógica central
+
+Services
+
+* isolam regras de negócio dos controllers
+
+Transações de banco
+
+* garantem consistência ao criar transações e itens
+
+---
