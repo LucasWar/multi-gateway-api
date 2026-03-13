@@ -1,29 +1,35 @@
 # Payment Processing API
 
 API de processamento de pagamentos desenvolvida como teste técnico.
-O sistema simula uma plataforma capaz de processar compras utilizando múltiplos gateways de pagamento com mecanismo de **failover automático**.
+O sistema simula uma plataforma capaz de processar compras utilizando **múltiplos gateways de pagamento**, com **failover automático** caso algum gateway falhe.
+
+O projeto foi desenvolvido com foco em:
+
+* Arquitetura limpa e organizada
+* Separação de responsabilidades
+* Testabilidade
+* Facilidade de execução e avaliação
 
 ---
 
-# Visão Geral
+# 📌 Visão Geral
 
-Esta API permite:
+A API permite:
 
 * Criar transações de compra
-* Processar pagamentos utilizando múltiplos gateways
+* Processar pagamentos usando múltiplos gateways
 * Realizar reembolsos
 * Gerenciar produtos
 * Gerenciar gateways
 * Autenticar usuários
-* Controlar permissões por papel (RBAC)
+* Controlar permissões via RBAC (Role Based Access Control)
 
-O sistema tenta processar pagamentos em **múltiplos gateways**, respeitando a prioridade configurada.
-
-Caso um gateway falhe, o sistema tenta automaticamente o próximo.
+Durante o processamento de pagamento, o sistema tenta utilizar os gateways **respeitando a prioridade configurada**.
+Caso um gateway falhe, o sistema tenta automaticamente o próximo disponível.
 
 ---
 
-# Tecnologias Utilizadas
+# 🧱 Tecnologias Utilizadas
 
 * Node.js
 * AdonisJS
@@ -34,150 +40,76 @@ Caso um gateway falhe, o sistema tenta automaticamente o próximo.
 
 ---
 
-# Arquitetura do Projeto
+# 🏗 Arquitetura do Projeto
 
-O projeto segue uma arquitetura baseada em camadas:
+O projeto segue uma arquitetura em camadas para separar responsabilidades:
 
 ```
 Controller
-↓
+   ↓
 Service
-↓
+   ↓
 Model
-↓
+   ↓
 Database
 ```
 
-Responsabilidades:
+### Controllers
 
-Controllers
+Responsáveis por:
 
-* Recebem requisições HTTP
-* Validam dados
-* Chamam services
+* Receber requisições HTTP
+* Validar dados
+* Delegar lógica para os services
 
-Services
+### Services
 
-* Contêm regras de negócio
-* Coordenam chamadas entre entidades
+Contêm as **regras de negócio do sistema**.
 
-Models
+Exemplos:
 
-* Representam entidades do banco
-* Gerenciam persistência via ORM
+* Processamento de checkout
+* Lógica de fallback entre gateways
+* Regras de reembolso
+
+### Models
+
+Representam as entidades do banco de dados e utilizam o ORM do AdonisJS para persistência.
 
 ---
 
-# Funcionalidade Principal: Processamento de Pagamento
+# 💳 Processamento de Pagamento
 
-Fluxo de checkout:
-
-1. Cliente envia requisição de compra
-2. Sistema busca os produtos
-3. Calcula o valor total
-4. Cria/recupera cliente
-5. Busca gateways ativos
-6. Tenta processar pagamento
-7. Caso falhe, tenta o próximo gateway
-8. Cria registro de transação
-
-Fluxo simplificado:
+Fluxo simplificado de checkout:
 
 ```
-checkout
-   ↓
-buscar produtos
-   ↓
-calcular total
-   ↓
-buscar gateways
-   ↓
-tentar gateway 1
-   ↓
-falhou?
-   ↓
-tentar gateway 2
-   ↓
-criar transação
+Cliente envia requisição
+        ↓
+Sistema busca produtos
+        ↓
+Calcula valor total
+        ↓
+Cria ou recupera cliente
+        ↓
+Busca gateways ativos
+        ↓
+Tenta processar pagamento
+        ↓
+Gateway falhou?
+   ↙          ↘
+Sim            Não
+↓               ↓
+Tenta próximo   Transação criada
+gateway
 ```
----
-# Seeds (Dados Iniciais)
 
-O projeto possui seeders responsáveis por popular o banco de dados com dados iniciais necessários para funcionamento e testes da API.
+Esse mecanismo garante **maior resiliência no processamento de pagamentos**.
 
-Atualmente existem dois seeders:
-
-initial_datum_seeder
-
-user_seeder
-
-Executar Seeds
-
-Após rodar as migrations, execute:
-
-node ace db:seed
-
-Isso executará todos os seeders registrados.
-
-Caso deseje executar um seeder específico:
-
-node ace db:seed --files="./database/seeders/initial_datum_seeder.ts"
-
-ou
-
-node ace db:seed --files="./database/seeders/user_seeder.ts"
-initial_datum_seeder
-
-Este seeder cria dados iniciais necessários para funcionamento do sistema, como:
-
-Gateways de pagamento
-
-Produtos de exemplo
-
-Esses dados permitem testar o fluxo de checkout sem precisar criar registros manualmente.
-
-Exemplo de dados criados:
-
-Gateways
-Nome	Prioridade	Ativo
-Gateway 1	1	true
-Gateway 2	2	true
-
-A prioridade define qual gateway será tentado primeiro no processamento de pagamentos.
-
-Produtos
-
-Produtos de exemplo são criados para permitir testes rápidos da rota:
-
-POST /checkout
-user_seeder
-
-Este seeder cria usuários de teste com diferentes níveis de permissão para facilitar testes da API.
-
-Usuários criados:
-
-Email	Role
-admin@test.com	ADMIN
-manager@test.com	MANAGER
-finance@test.com	FINANCE
-user@test.com	USER
-
-Senha padrão:
-
-123456
-
-Esses usuários podem ser utilizados para autenticação na rota:
-
-POST /login
-
-Após autenticação, o token retornado deve ser utilizado no header:
-
-Authorization: Bearer TOKEN
 ---
 
-# Requisitos
+# 📋 Requisitos
 
-Para executar o projeto você precisa:
+Para executar o projeto você precisa ter instalado:
 
 * Node.js 18+
 * Docker
@@ -186,50 +118,19 @@ Para executar o projeto você precisa:
 
 ---
 
-# Instalação
+# 🚀 Quick Start
 
-Clone o repositório:
-
-```
-git clone <repo>
-cd payment-api
-```
-
-Instale dependências:
-
-```
-npm install
-```
-
-Configure as variáveis de ambiente:
-
-```
-cp .env.example .env
-```
-
----
-
-# Executando o projeto
-
-Subir containers:
+Para rodar o projeto rapidamente:
 
 ```
 docker-compose up -d
-```
-
-Rodar migrations:
-
-```
+npm install
 node ace migration:run
-```
-
-Iniciar servidor:
-
-```
+node ace db:seed
 node ace serve --watch
 ```
 
-API estará disponível em:
+A API estará disponível em:
 
 ```
 http://localhost:3333
@@ -237,46 +138,150 @@ http://localhost:3333
 
 ---
 
-# Gateways de Pagamento
+# ⚙️ Instalação Completa
 
-O sistema utiliza dois gateways simulados fornecidos pelo desafio técnico.
-
-Os gateways são acessados através de um **GatewayFactory**, permitindo fácil extensão para novos provedores.
-
-Estrutura:
+### 1. Clonar o repositório
 
 ```
-GatewayFactory
-   ↓
-GatewayService
-   ↓
-Gateway Implementation
+git clone <repo-url>
+cd payment-api
 ```
 
-Cada gateway implementa a interface:
+### 2. Instalar dependências
 
 ```
-pay()
-refund()
+npm install
+```
+
+### 3. Configurar variáveis de ambiente
+
+Copie o arquivo de exemplo:
+
+```
+cp .env.example .env
+```
+
+Exemplo de configuração:
+
+```
+DB_DATABASE=betalent_api
+DB_USER=root
+DB_PASSWORD=root
+```
+
+### 4. Subir containers
+
+```
+docker-compose up -d
+```
+
+### 5. Rodar migrations
+
+```
+node ace migration:run
+```
+
+### 6. Popular banco com dados iniciais
+
+```
+node ace db:seed
+```
+
+### 7. Iniciar servidor
+
+```
+node ace serve --watch
 ```
 
 ---
 
-# Autenticação
+# 🌱 Seeds (Dados Iniciais)
+
+O projeto possui seeders responsáveis por popular o banco com dados necessários para testes.
+
+## Seeders disponíveis
+
+* `initial_datum_seeder`
+* `user_seeder`
+
+---
+
+## initial_datum_seeder
+
+Cria dados iniciais necessários para funcionamento do sistema:
+
+### Gateways de pagamento
+
+| Nome      | Prioridade | Ativo |
+| --------- | ---------- | ----- |
+| Gateway 1 | 1          | true  |
+| Gateway 2 | 2          | true  |
+
+A **prioridade** determina a ordem em que os gateways serão utilizados.
+
+---
+
+### Produtos
+
+Produtos de exemplo são criados para facilitar testes da rota de checkout.
+
+Esses produtos permitem testar rapidamente o fluxo:
+
+```
+POST /checkout
+```
+
+---
+
+## user_seeder
+
+Cria usuários de teste com diferentes níveis de permissão.
+
+| Email                                       | Role    |
+| ------------------------------------------- | ------- |
+| [admin@test.com](mailto:admin@test.com)     | ADMIN   |
+| [manager@test.com](mailto:manager@test.com) | MANAGER |
+| [finance@test.com](mailto:finance@test.com) | FINANCE |
+| [user@test.com](mailto:user@test.com)       | USER    |
+
+Senha padrão para todos:
+
+```
+123456
+```
+
+Esses usuários podem ser utilizados para autenticação na API.
+
+---
+
+# 🔐 Autenticação
 
 O sistema utiliza autenticação baseada em token.
 
-Fluxo:
+### Login
 
 ```
 POST /login
-↓
-retorna token
-↓
-token enviado no header Authorization
 ```
 
-Exemplo:
+Exemplo de body:
+
+```
+{
+  "email": "admin@test.com",
+  "password": "123456"
+}
+```
+
+Resposta:
+
+```
+{
+  "token": "jwt_token"
+}
+```
+
+Para acessar rotas protegidas, envie o token no header:
 
 ```
 Authorization: Bearer TOKEN
@@ -284,50 +289,38 @@ Authorization: Bearer TOKEN
 
 ---
 
-# Controle de Permissões (RBAC)
+# 🔑 Controle de Permissões (RBAC)
 
-Papéis disponíveis:
+Papéis disponíveis no sistema:
 
-ADMIN
-MANAGER
-FINANCE
-USER
-
-Permissões:
-
-ADMIN
-
-* gerenciar gateways
-* acessar todos endpoints
-
-MANAGER
-
-* visualizar transações
-* gerenciar produtos
-
-FINANCE
-
-* gerenciar produtos
-
-USER
-
-* acesso restrito
+| Role    | Permissões                                 |
+| ------- | ------------------------------------------ |
+| ADMIN   | acesso total                               |
+| MANAGER | gerenciar produtos e visualizar transações |
+| FINANCE | gerenciar produtos                         |
+| USER    | acesso restrito                            |
 
 ---
 
-# Rotas da API
+# 📡 Rotas da API
 
 ## Autenticação
 
+### Login
+
+```
 POST /login
+```
 
 ---
 
 ## Checkout
 
-POST /checkout
+### Criar compra
 
-Cria uma nova transação de compra.
+```
+POST /checkout
+```
 
 Body:
 
@@ -350,56 +343,81 @@ Body:
 
 ## Transações
 
-GET /transactions
+### Listar transações
 
-Lista transações.
+```
+GET /transactions
+```
 
 Permissão:
+
+```
 MANAGER
+```
 
 ---
 
-POST /transactions/:id/refund
+### Realizar reembolso
 
-Realiza reembolso.
+```
+POST /transactions/:id/refund
+```
 
 Permissão:
+
+```
 ADMIN
+```
 
 ---
 
 ## Produtos
 
+```
 GET /products
 POST /products
 PUT /products/:id
 DELETE /products/:id
+```
 
-Permissão:
-MANAGER ou FINANCE
+Permissões:
+
+```
+MANAGER
+FINANCE
+```
 
 ---
 
 ## Gateways
 
+```
 GET /gateways
 POST /gateways/:id/status
 POST /gateways/:id/priority
+```
 
 Permissão:
+
+```
 ADMIN
+```
 
 ---
 
 ## Clientes
 
+```
 GET /clients
+```
 
 ---
 
-# Testes
+# 🧪 Testes
 
-Executar testes:
+Os testes automatizados foram implementados utilizando **Japa**.
+
+Para executar os testes:
 
 ```
 node ace test
@@ -410,24 +428,29 @@ Os testes utilizam:
 * Japa
 * Sinon
 
-Durante os testes, o banco é isolado usando **transações globais**, garantindo que dados criados sejam automaticamente revertidos.
+Durante a execução dos testes o banco de dados é isolado utilizando **transações globais**, garantindo que qualquer dado criado seja automaticamente revertido ao final de cada teste.
+
+Isso evita poluição do banco e garante consistência nos resultados.
 
 ---
 
-# Decisões de Arquitetura
+# 🧠 Decisões de Arquitetura
 
-Algumas decisões importantes:
+Algumas decisões importantes tomadas no projeto:
 
-GatewayFactory
+### Service Layer
 
-* permite adicionar novos gateways sem alterar a lógica central
+A lógica de negócio foi isolada em **services**, separando responsabilidades da camada HTTP.
 
-Services
+### GatewayFactory
 
-* isolam regras de negócio dos controllers
+A utilização de uma factory permite adicionar novos gateways facilmente sem modificar a lógica principal do sistema.
 
-Transações de banco
+### Transações de banco
 
-* garantem consistência ao criar transações e itens
+O uso de transações garante consistência ao criar:
 
----
+* transação
+* itens da transação
+
+Se algum passo falhar, o banco executa rollback automaticamente.
