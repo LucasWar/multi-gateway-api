@@ -13,11 +13,6 @@ export default class AuthController {
       return response.ok({
         message: 'Login realizado com sucesso',
         token: token.value!.release(),
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-        },
       })
     } catch (error) {
       return response.unauthorized({ error: 'Credenciais inválidas' })

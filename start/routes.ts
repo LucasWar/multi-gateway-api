@@ -34,8 +34,8 @@ router
     router
       .group(() => {
         router.get('/gateways', [GatewaysController, 'index'])
-        router.post('/gateways/:id/status', [GatewaysController, 'updateStatus'])
-        router.post('/gateways/:id/priority', [GatewaysController, 'updatePriority'])
+        router.patch('/gateways/:id/status', [GatewaysController, 'updateStatus'])
+        router.patch('/gateways/:id/priority', [GatewaysController, 'updatePriority'])
       })
       .use(middleware.role(['ADMIN']))
 

@@ -200,7 +200,7 @@ export interface Registry {
     }
   }
   'gateways.update_status': {
-    methods: ["POST"]
+    methods: ["PATCH"]
     pattern: '/gateways/:id/status'
     types: {
       body: ExtractBody<InferInput<(typeof import('#validators/gateways').statusSchema)>>
@@ -212,7 +212,7 @@ export interface Registry {
     }
   }
   'gateways.update_priority': {
-    methods: ["POST"]
+    methods: ["PATCH"]
     pattern: '/gateways/:id/priority'
     types: {
       body: ExtractBody<InferInput<(typeof import('#validators/gateways').prioritySchema)>>
