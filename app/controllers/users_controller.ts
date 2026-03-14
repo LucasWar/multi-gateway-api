@@ -6,6 +6,16 @@ import type { HttpContext } from '@adonisjs/core/http'
 export default class UsersController {
   private userService = new UserService()
 
+  public async show({ params, response }: HttpContext) {
+    const user = await this.userService.findProductById(params.id)
+
+    return response.ok({
+      success: true,
+      message: 'Usuario encontrado',
+      data: user,
+    })
+  }
+
   async index({ request }: HttpContext) {
     const page = request.input('page', 1)
     const limit = request.input('limit', 10)
@@ -15,22 +25,33 @@ export default class UsersController {
   async store({ request, response }: HttpContext) {
     const payload = await request.validateUsing(userSchema)
 
-    const result = await this.userService.create(payload)
+    const user = await this.userService.create(payload)
 
-    return response.created(result)
+    return response.created({
+      success: true,
+      message: 'Usuário criado com sucesso !',
+      data: user,
+    })
   }
 
   public async destroy({ response, params }: HttpContext) {
     const result = await this.userService.delete(params.id)
 
-    return response.ok(result)
+    return response.ok({
+      message: 'Usuário deletedo com sucesso !',
+      success: true,
+    })
   }
 
   public async update({ response, params, request }: HttpContext) {
-    const user = await request.validateUsing(userSchema)
+    const payload = await request.validateUsing(userSchema)
 
-    const result = await this.userService.update(user, params.id)
+    const user = await this.userService.update(payload, params.id)
 
-    return response.ok(result)
+    return response.ok({
+      message: 'Usuário atualizado com sucesso ',
+      success: true,
+      data: user,
+    })
   }
 }

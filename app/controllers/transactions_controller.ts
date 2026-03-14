@@ -8,16 +8,13 @@ export default class TransactionsController {
   public async store({ request, response }: HttpContext) {
     const payload = await request.validateUsing(checkoutSchema)
 
-    const result = await this.transactionService.processCheckout(payload)
+    const transaction = await this.transactionService.processCheckout(payload)
 
-    if (result.success === false) {
-      const { statusCode, ...content } = result
-      return response.status(statusCode ?? 400).json({
-        ...content,
-      })
-    }
-
-    return response.created(result)
+    return response.created({
+      success: true,
+      message: 'Trasação criada com sucesso',
+      data: transaction,
+    })
   }
 
   public async index({ response }: HttpContext) {
@@ -34,16 +31,13 @@ export default class TransactionsController {
   }
 
   public async refund({ response, request }: HttpContext) {
-    const result = await this.transactionService.refund(request.param('id'))
+    const transaction = await this.transactionService.refund(request.param('id'))
 
-    if (result.success === false) {
-      const { statusCode, ...content } = result
-      return response.status(statusCode ?? 400).json({
-        ...content,
-      })
-    }
-
-    return response.ok(result)
+    return response.ok({
+      success: true,
+      message: 'Transação criada com sucesso',
+      data: transaction,
+    })
   }
 
   async findUnique({ request, response }: HttpContext) {

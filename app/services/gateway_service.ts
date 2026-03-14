@@ -1,15 +1,22 @@
 import Gateway from '#models/gateway'
-import { Exception } from '@adonisjs/core/exceptions'
 import type { GatewayPriority, GatewayStatus } from '../interfaces/gateways_interface.ts'
 import type { ServiceResponse } from '../contracts/service_response.ts'
+import AppException from '#exceptions/app_exception'
+import { ErrorCode } from '../enum/error_code_enum.ts'
 
 export class GatewayService {
-  async changeStatus(payload: GatewayStatus, id: number): Promise<ServiceResponse<Gateway>> {
+  async findUniqueById(id: number) {
     const gateway = await Gateway.find(id)
 
     if (!gateway) {
-      throw new Exception('Gateway não encontrado', { status: 404 })
+      throw new AppException('Gateway não encontrado', 404, ErrorCode.GATEWAY_NOT_FOUND)
     }
+
+    return gateway
+  }
+
+  async changeStatus(payload: GatewayStatus, id: number): Promise<ServiceResponse<Gateway>> {
+    const gateway = await this.findUniqueById(id)
 
     gateway.isActive = payload.isActive
 
@@ -25,11 +32,7 @@ export class GatewayService {
   }
 
   async changePriority(payload: GatewayPriority, id: number): Promise<ServiceResponse<Gateway>> {
-    const gateway = await Gateway.find(id)
-
-    if (!gateway) {
-      throw new Exception('Gateway não encontrado', { status: 404 })
-    }
+    const gateway = await this.findUniqueById(id)
 
     const oldPriority = gateway.priority
     const newPriority = payload.priority

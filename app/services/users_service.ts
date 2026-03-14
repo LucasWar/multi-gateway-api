@@ -1,74 +1,60 @@
 import User from '#models/user'
-import { Exception } from '@adonisjs/core/exceptions'
 import type { CreateUser, UpdateUser } from '../interfaces/users_interfaces.ts'
 import hash from '@adonisjs/core/services/hash'
-import { type ServiceResponse } from '../contracts/service_response.ts'
+import AppException from '#exceptions/app_exception'
+import { ErrorCode } from '../enum/error_code_enum.ts'
 
 export class UserService {
-  async create(payload: CreateUser): Promise<ServiceResponse<User>> {
-    await this.validateUserData({ email: payload.email })
+  async findProductById(id: number) {
+    const user = await User.find(id)
+
+    if (!user) {
+      throw new AppException('Produto não encontrado', 404, ErrorCode.USER_NOT_FOUND)
+    }
+
+    return user
+  }
+
+  async create(payload: CreateUser) {
+    await this.validateEmail(payload.email)
 
     payload.password = await hash.make(payload.password)
 
     const newUser = await User.create(payload)
 
-    return {
-      success: true,
-      message: 'Usuário criado com sucesso !',
-      data: newUser,
-    }
+    return newUser
   }
 
-  async update(payload: UpdateUser, id: number): Promise<ServiceResponse<User>> {
-    const user = await User.find(id)
-
-    if (!user) {
-      throw new Exception('Usuário não encontrado !', { status: 404 })
-    }
+  async update(payload: UpdateUser, id: number) {
+    const user = await this.findProductById(id)
 
     if (payload.password) {
       payload.password = await hash.make(payload.password)
     }
 
+    if (payload.email && user.email !== payload.email) {
+      await this.validateEmail(payload.email)
+    }
+
     user.merge(payload)
+
     await user.save()
 
-    return {
-      message: 'Usuário atualizado com sucesso ',
-      success: true,
-      data: user,
-    }
+    return user
   }
 
-  async delete(id: number): Promise<ServiceResponse<User>> {
-    const user = await User.find(id)
-
-    if (!user) {
-      throw new Exception('Usuário não encontrado !', { status: 404 })
-    }
+  async delete(id: number) {
+    const user = await this.findProductById(id)
 
     await user.delete()
-
-    return {
-      message: 'Usuário deletedo com sucesso !',
-      success: true,
-    }
   }
 
-  private async validateUserData({ id, email }: { id?: number; email?: string }) {
-    if (id) {
-      const validUserId = await User.find(id)
-
-      if (!validUserId) {
-        throw new Exception('Usuário não encontrado !', { status: 404 })
-      }
-    }
-
+  private async validateEmail(email: string) {
     if (email) {
       const uniqueEmail = await User.findBy('email', email)
 
       if (uniqueEmail) {
-        throw new Exception('Email ja cadastrado !', { status: 409 })
+        throw new AppException('Email duplicados', 409, ErrorCode.EMAIL_ALREADY_EXISTS)
       }
     }
   }

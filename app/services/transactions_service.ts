@@ -9,13 +9,15 @@ import { GatewayService } from './gateway_service.ts'
 import type Gateway from '#models/gateway'
 import Database from '@adonisjs/lucid/services/db'
 import type { ServiceResponse } from '../contracts/service_response.ts'
+import AppException from '#exceptions/app_exception'
+import { ErrorCode } from '../enum/error_code_enum.ts'
 
 export class TransactionService {
   private productService = new ProductService()
   private clientService = new ClientService()
   private gatewayService = new GatewayService()
 
-  public async processCheckout(payload: CheckoutPayload): Promise<ServiceResponse<Transaction>> {
+  public async processCheckout(payload: CheckoutPayload) {
     const productIds = payload.products.map((p) => p.productId)
 
     const products = await this.productService.findProductsById(productIds)
@@ -30,11 +32,7 @@ export class TransactionService {
     const gateways = await this.gatewayService.listAllActive()
 
     if (!gateways.length) {
-      return {
-        success: false,
-        message: 'Nenhum gateway disponivel',
-        statusCode: 503,
-      }
+      throw new AppException('Nenhum gateway disponivel.', 503, ErrorCode.NO_GATEWAY_AVAILABLE)
     }
 
     const { paymentSuccess, externalTransactionId, usedGatewayId } = await this.sendTransactionGateways(gateways, totalAmount, payload)
@@ -63,37 +61,26 @@ export class TransactionService {
       return transactionCreate
     })
 
-    return {
-      success: paymentSuccess,
-      data: transaction,
-    }
+    return transaction
   }
 
-  public async refund(id: number): Promise<ServiceResponse<Transaction>> {
+  public async refund(id: number) {
     const transaction = await Transaction.find(id)
 
     if (!transaction) {
-      return {
-        success: false,
-        message: 'Trasação não encontrada',
-        statusCode: 404,
-      }
+      throw new AppException('Transação não encontrada.', 404, ErrorCode.TRANSACTION_NOT_FOUND)
     }
 
     if (transaction.status === 'REFUNDED') {
-      return {
-        success: false,
-        message: 'Trasação não encontrada',
-        statusCode: 409,
-      }
+      throw new AppException('Transação ja estornada.', 409, ErrorCode.TRANSACTION_ALREADY_REVERSED)
     }
 
     if (transaction.status !== 'PAID') {
-      return {
-        success: false,
-        message: 'Apenas transações pagas podem ser reembolsadas.',
-        statusCode: 409,
-      }
+      throw new AppException(
+        'Apenas transações pagas podem ser reembolsadas.',
+        409,
+        ErrorCode.TRANSACTION_ALREADY_REVERSED
+      )
     }
 
     await transaction.load('gateway')
@@ -101,32 +88,27 @@ export class TransactionService {
     const service = GatewayFactory.make(transaction.gateway.name)
 
     if (!service) {
-      return {
-        success: false,
-        message: 'Gateway desconhecido para reembolso.',
-        statusCode: 404,
-      }
+      throw new AppException(
+        'Gateway desconhecido para reembolso.',
+        404,
+        ErrorCode.GATEWAY_NOT_FOUND
+      )
     }
 
     const refundResponse = await service.refund(transaction.externalId!)
 
     if (!refundResponse.success) {
-      return {
-        success: false,
-        message: `Erro ao processar estorno no gateway: ${refundResponse.errorMessage}`,
-        statusCode: 400,
-      }
+      throw new AppException(
+        `Erro ao processar estorno no gateway: ${refundResponse.errorMessage}`,
+        400,
+        ErrorCode.GATEWAY_REFUND_FAILED
+      )
     }
 
     transaction.status = 'REFUNDED'
     await transaction.save()
 
-    return {
-      success: true,
-      message: 'Reembolso realizado com sucesso!',
-      statusCode: 200,
-      data: transaction,
-    }
+    return transaction
   }
 
   async findUniqueById(id: number): Promise<ServiceResponse<Transaction>> {
