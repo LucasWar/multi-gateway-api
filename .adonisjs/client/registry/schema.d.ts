@@ -107,10 +107,10 @@ export interface Registry {
     methods: ["PUT","PATCH"]
     pattern: '/products/:id'
     types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/products').productSchema)>>
+      body: ExtractBody<InferInput<(typeof import('#validators/products').productUpdateSchema)>>
       paramsTuple: [ParamValue]
       params: { id: ParamValue }
-      query: ExtractQuery<InferInput<(typeof import('#validators/products').productSchema)>>
+      query: ExtractQuery<InferInput<(typeof import('#validators/products').productUpdateSchema)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/products_controller').default['update']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/products_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
     }

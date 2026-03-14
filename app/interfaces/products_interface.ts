@@ -3,3 +3,13 @@ export interface ProductInterface {
   amount: number
   name: string
 }
+
+export interface ProductPayload {
+  amount: number
+  name: string
+}
+
+export interface ProductUpdatePayload {
+  amount?: number
+  name?: string
+}

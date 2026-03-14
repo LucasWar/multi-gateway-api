@@ -1,37 +1,57 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Product from '#models/product'
-import { productSchema } from '#validators/products'
+import { productSchema, productUpdateSchema } from '#validators/products'
+import { ProductService } from '#services/products_service'
 
 export default class ProductsController {
+  private ptodutoService = new ProductService()
+
   public async index({ response }: HttpContext) {
     const products = await Product.all()
     return response.ok(products)
   }
 
   public async show({ params, response }: HttpContext) {
-    const product = await Product.findOrFail(params.id)
-    return response.ok(product)
+    const result = await this.ptodutoService.findProductById(params.id)
+
+    const { statusCode, ...content } = result
+
+    return response.status(statusCode ?? 400).json({
+      ...content,
+    })
   }
 
   public async store({ request, response }: HttpContext) {
     const payload = await request.validateUsing(productSchema)
-    const product = await Product.create(payload)
-    return response.created({ message: 'Produto criado com sucesso!', product })
+
+    const result = await this.ptodutoService.create(payload)
+
+    const { statusCode, ...content } = result
+
+    return response.status(statusCode ?? 400).json({
+      ...content,
+    })
   }
 
   public async update({ params, request, response }: HttpContext) {
-    const product = await Product.findOrFail(params.id)
-    const payload = await request.validateUsing(productSchema)
+    const payload = await request.validateUsing(productUpdateSchema)
 
-    product.merge(payload)
-    await product.save()
+    const result = await this.ptodutoService.update(payload, params.id)
 
-    return response.ok({ message: 'Produto atualizado com sucesso!', product })
+    const { statusCode, ...content } = result
+
+    return response.status(statusCode ?? 400).json({
+      ...content,
+    })
   }
 
   public async destroy({ params, response }: HttpContext) {
-    const product = await Product.findOrFail(params.id)
-    await product.delete()
-    return response.ok({ message: 'Produto excluído com sucesso!' })
+    const result = await this.ptodutoService.delete(params.id)
+
+    const { statusCode, ...content } = result
+
+    return response.status(statusCode ?? 400).json({
+      ...content,
+    })
   }
 }
