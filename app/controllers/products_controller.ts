@@ -12,46 +12,45 @@ export default class ProductsController {
   }
 
   public async show({ params, response }: HttpContext) {
-    const result = await this.ptodutoService.findProductById(params.id)
+    const product = await this.ptodutoService.findProductById(params.id)
 
-    const { statusCode, ...content } = result
-
-    return response.status(statusCode ?? 400).json({
-      ...content,
+    return response.ok({
+      success: true,
+      message: 'Produto encontrado',
+      data: product,
     })
   }
 
   public async store({ request, response }: HttpContext) {
     const payload = await request.validateUsing(productSchema)
 
-    const result = await this.ptodutoService.create(payload)
+    const product = await this.ptodutoService.create(payload)
 
-    const { statusCode, ...content } = result
-
-    return response.status(statusCode ?? 400).json({
-      ...content,
+    return response.created({
+      success: true,
+      message: 'Produto criado com sucesso',
+      data: product,
     })
   }
 
   public async update({ params, request, response }: HttpContext) {
     const payload = await request.validateUsing(productUpdateSchema)
 
-    const result = await this.ptodutoService.update(payload, params.id)
+    const product = await this.ptodutoService.update(payload, params.id)
 
-    const { statusCode, ...content } = result
-
-    return response.status(statusCode ?? 400).json({
-      ...content,
+    return response.ok({
+      success: true,
+      message: 'Produto atualizado com sucesso',
+      data: product,
     })
   }
 
   public async destroy({ params, response }: HttpContext) {
-    const result = await this.ptodutoService.delete(params.id)
+    await this.ptodutoService.delete(params.id)
 
-    const { statusCode, ...content } = result
-
-    return response.status(statusCode ?? 400).json({
-      ...content,
+    return response.noContent({
+      success: true,
+      message: 'Produto deletado com sucesso',
     })
   }
 }

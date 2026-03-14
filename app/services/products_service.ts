@@ -1,5 +1,6 @@
+import AppException from '#exceptions/app_exception'
 import Product from '#models/product'
-import { type ServiceResponse } from '../contracts/service_response.ts'
+import { ErrorCode } from '../enum/error_code_enum.ts'
 import type { ProductUpdatePayload, ProductPayload } from '../interfaces/products_interface.ts'
 
 export class ProductService {
@@ -7,76 +8,34 @@ export class ProductService {
     return await Product.query().whereIn('id', ids)
   }
 
-  async findProductById(id: number): Promise<ServiceResponse<Product>> {
+  async findProductById(id: number) {
     const product = await Product.find(id)
 
     if (!product) {
-      return {
-        success: false,
-        message: 'Produto não encontrado',
-        statusCode: 404,
-      }
+      throw new AppException('Produto não encontrado', 404, ErrorCode.PRODUCT_NOT_FOUND)
     }
 
-    return {
-      success: true,
-      message: 'Produto encontrado',
-      statusCode: 200,
-      data: product,
-    }
+    return product
   }
 
-  async create(payload: ProductPayload): Promise<ServiceResponse<Product>> {
+  async create(payload: ProductPayload) {
     const product = await Product.create(payload)
-
-    return {
-      success: true,
-      message: 'Produto criado com sucesso',
-      statusCode: 201,
-      data: product,
-    }
+    return product
   }
 
-  async update(payload: ProductUpdatePayload, id: number): Promise<ServiceResponse<Product>> {
-    const product = await Product.find(id)
-
-    if (!product) {
-      return {
-        success: false,
-        message: 'Produto não encontrado',
-        statusCode: 404,
-      }
-    }
+  async update(payload: ProductUpdatePayload, id: number) {
+    const product = await this.findProductById(id)
 
     product.merge(payload)
 
     await product.save()
 
-    return {
-      success: true,
-      message: 'Produto atualizado com sucesso',
-      statusCode: 200,
-      data: product,
-    }
+    return product
   }
 
-  async delete(id: number): Promise<ServiceResponse<Product>> {
-    const product = await Product.find(id)
-
-    if (!product) {
-      return {
-        success: false,
-        message: 'Produto não encontrado',
-        statusCode: 404,
-      }
-    }
+  async delete(id: number) {
+    const product = await this.findProductById(id)
 
     await product.delete()
-
-    return {
-      success: true,
-      message: 'Produto deletado com sucesso',
-      statusCode: 200,
-    }
   }
 }
