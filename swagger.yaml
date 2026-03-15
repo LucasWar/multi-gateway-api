@@ -1,0 +1,1975 @@
+openapi: 3.0.0
+info:
+  title: API de Pagamentos - BeTalent
+  description: API para processamento de transações, fallback de gateways e gestão administrativa com RBAC.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3333
+    description: Servidor Local
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: Autenticação do sistema
+  - name: Checkout
+    description: Processamento de pagamentos públicos
+  - name: Transactions
+    description: Gestão e reembolso de transações
+  - name: Products
+    description: Gestão do catálogo de produtos
+  - name: Users
+    description: Gestão de usuários e permissões
+  - name: Gateways
+    description: Configuração de provedores de pagamento
+  - name: Clients
+    description: Consulta de clientes
+
+paths:
+  # ------------------------- AUTH -------------------------
+  /login:
+    post:
+      tags: [Auth]
+      summary: Autentica um usuário e retorna o token
+      security: [] # Rota pública
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: admin@test.com
+                password:
+                  type: string
+                  example: "123456"
+      responses:
+        '200':
+          description: Sucesso na autenticação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Login realizado com sucesso"
+                  token:
+                    type: string
+                    example: "Oq72... (seu token gerado)"
+        '401':
+          description: Credenciais inválidas
+
+  # ----------------------- CHECKOUT -----------------------
+  /checkout:
+    post:
+      tags: [Checkout]
+      summary: Processa uma nova compra (Fallback automático)
+      security: [] # Rota pública
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Cliente da Silva
+                email:
+                  type: string
+                  example: cliente@email.com
+                cardNumber:
+                  type: string
+                  example: "5569000000006063"
+                cvv:
+                  type: string
+                  example: "123"
+                products:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      productId:
+                        type: integer
+                        example: 1
+                      quantity:
+                        type: integer
+                        example: 2
+      responses:
+        '201':
+          description: Transação criada (pode estar PAID ou FAILED)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    nullable: true
+                  code:
+                    type: string
+                    nullable: true
+                  data:
+                    type: object
+                    properties:
+                      clientId:
+                        type: integer
+                      gatewayId:
+                        type: integer
+                        nullable: true
+                      externalId:
+                        type: string
+                        nullable: true
+                      status:
+                        type: string
+                        example: PAID
+                      amount:
+                        type: number
+                      cardLastNumbers:
+                        type: string
+              examples:
+                paymentApproved:
+                  summary: Pagamento aprovado
+                  value:
+                    success: true
+                    data:
+                      clientId: 1
+                      gatewayId: 1
+                      externalId: "cfbf9b3d-cb31-44f7-8922-482cee534b1e"
+                      status: "PAID"
+                      amount: 350000
+                      cardLastNumbers: "6063"
+
+                paymentFailed:
+                  summary: Pagamento recusado por todos os gateways
+                  value:
+                    success: false
+                    message: "Pagamento recusado em todos os gateways."
+                    code: "PAYMENT_FAILED"
+                    data:
+                      clientId: 1
+                      gatewayId: null
+                      externalId: null
+                      status: "FAILED"
+                      amount: 350000
+                      cardLastNumbers: "6063"
+
+
+        '503':
+          description: Nenhum gateway disponivel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Nenhum gateway disponivel
+
+  # --------------------- TRANSACTIONS ---------------------
+  /transactions:
+    get:
+      tags: [Transactions]
+      summary: Lista todas as transações (Apenas MANAGER)
+      parameters:
+      - name: page
+        in: query
+        description: Número da página atual
+        required: false
+        schema:
+          type: integer
+          default: 1
+          example: 1
+      - name: limit
+        in: query
+        description: Quantidade de itens por página
+        required: false
+        schema:
+          type: integer
+          default: 10
+          example: 20
+      responses:
+        '200':
+          description: Lista paginada de transações
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 35
+                      perPage:
+                        type: integer
+                        example: 10
+                      currentPage:
+                        type: integer
+                        example: 1
+                      lastPage:
+                        type: integer
+                        example: 4
+                      firstPage:
+                        type: integer
+                        example: 1
+                      firstPageUrl:
+                        type: string
+                        example: "/?page=1"
+                      lastPageUrl:
+                        type: string
+                        example: "/?page=4"
+                      nextPageUrl:
+                        type: string
+                        nullable: true
+                        example: "/?page=2"
+                      previousPageUrl:
+                        type: string
+                        nullable: true
+                        example: null
+
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 49
+
+                        clientId:
+                          type: integer
+                          example: 4
+
+                        gatewayId:
+                          type: integer
+                          nullable: true
+                          example: null
+
+                        externalId:
+                          type: string
+                          nullable: true
+                          example: null
+
+                        status:
+                          type: string
+                          enum: [PAID, FAILED]
+                          example: FAILED
+
+                        amount:
+                          type: integer
+                          example: 350000
+
+                        cardLastNumbers:
+                          type: string
+                          example: "6063"
+
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2026-03-15T14:13:48.000+00:00"
+
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2026-03-15T14:13:48.000+00:00"
+
+                        client:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 4
+                            name:
+                              type: string
+                              example: "Usuário teste"
+                            email:
+                              type: string
+                              example: "teste@gmail.com"
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+
+                        gateway:
+                          type: object
+                          nullable: true
+                          properties:
+                            id:
+                              type: integer
+                              example: 2
+                            name:
+                              type: string
+                              example: "Gateway 2"
+                            isActive:
+                              type: integer
+                              example: 1
+                            priority:
+                              type: integer
+                              example: 2
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+
+                        items:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                example: 42
+                              transactionId:
+                                type: integer
+                                example: 49
+                              productId:
+                                type: integer
+                                example: 1
+                              quantity:
+                                type: integer
+                                example: 1
+                              createdAt:
+                                type: string
+                                format: date-time
+                              updatedAt:
+                                type: string
+                                format: date-time
+
+                              product:
+                                type: object
+                                properties:
+                                  id:
+                                    type: integer
+                                    example: 1
+                                  name:
+                                    type: string
+                                    example: "Notebook Pro"
+                                  amount:
+                                    type: integer
+                                    example: 350000
+                                  createdAt:
+                                    type: string
+                                    format: date-time
+                                  updatedAt:
+                                    type: string
+                                    format: date-time
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+
+  /transactions/{id}:
+    get:
+      tags: [Transactions]
+      summary: Busca detalhes de uma transação (Apenas MANAGER)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes da transação encontrada com sucesso
+          content:
+            application/json:
+              
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      clientId:
+                        type: integer
+                        example: 1
+                      gatewayId:
+                        type: integer
+                        nullable: true
+                        example: 1
+                      externalId:
+                        type: string
+                        nullable: true
+                        example: "92312d28-d74b-4a83-b225-0c87d082cdcb"
+                      status:
+                        type: string
+                        example: "REFUNDED"
+                      amount:
+                        type: integer
+                        example: 350000
+                      cardLastNumbers:
+                        type: string
+                        example: "6063"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T15:10:23.000+00:00"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-12T23:45:37.000+00:00"
+                      gateway:
+                        type: object
+                        nullable: true
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: "Gateway 1"
+                          isActive:
+                            type: integer
+                            example: 0
+                          priority:
+                            type: integer
+                            example: 2
+                          createdAt:
+                            type: string
+                            format: date-time
+                            example: "2026-03-11T15:08:52.000+00:00"
+                          updatedAt:
+                            type: string
+                            format: date-time
+                            example: "2026-03-14T14:32:09.000+00:00"
+        '404':
+          description: Transação não encontrada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Compra não encontrada"
+                  code:
+                    type: string
+                    example: "TRANSACTION_NOT_FOUND"
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+  /transactions/{id}/refund:
+    post:
+      tags: [Transactions]
+      summary: Realiza o estorno de uma transação (Apenas FINANCE)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reembolso processado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      clientId:
+                        type: integer
+                        example: 1
+                      gatewayId:
+                        type: integer
+                        example: 1
+                      externalId:
+                        type: string
+                        example: "92312d28-d74b-4a83-b225-0c87d082cdcb"
+                      status:
+                        type: string
+                        example: "REFUNDED"
+                      amount:
+                        type: integer
+                        example: 350000
+                      cardLastNumbers:
+                        type: string
+                        example: "6063"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T15:10:23.000+00:00"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-12T23:45:37.000+00:00"
+                      gateway:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          name:
+                            type: string
+                            example: "Gateway 1"
+                          isActive:
+                            type: integer
+                            example: 0
+                          priority:
+                            type: integer
+                            example: 2
+                          createdAt:
+                            type: string
+                            format: date-time
+                            example: "2026-03-11T15:08:52.000+00:00"
+                          updatedAt:
+                            type: string
+                            format: date-time
+                            example: "2026-03-14T14:32:09.000+00:00" 
+        '409':
+          description: Conflito na transação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                  code:
+                    type: string
+              examples:
+                transactionNotPaid:
+                  summary: Transação não paga
+                  value:
+                    success: false
+                    message: Apenas transações pagas podem ser reembolsadas.
+                    code: TRANSACTION_NOT_PAID
+                alreadyReversed:
+                  summary: Transação já estornada
+                  value:
+                    success: false
+                    message: Transação já estornada.
+                    code: TRANSACTION_ALREADY_REVERSED
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+
+  # ----------------------- PRODUCTS -----------------------
+  /products:
+    get:
+      tags: [Products]
+      summary: Lista todos os produtos
+      parameters:
+      - name: page
+        in: query
+        description: Número da página atual
+        required: false
+        schema:
+          type: integer
+          default: 1
+          example: 1
+      - name: limit
+        in: query
+        description: Quantidade de itens por página
+        required: false
+        schema:
+          type: integer
+          default: 10
+          example: 20
+      responses:
+       '200':
+        description: Lista de produtos
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                meta:
+                  type: object
+                  properties:
+                    total:
+                      type: integer
+                      example: 1
+                    perPage:
+                      type: integer
+                      example: 1
+                    currentPage:
+                      type: integer
+                      example: 1
+                    lastPage:
+                      type: integer
+                      example: 1
+                    firstPage:
+                      type: integer
+                      example: 1
+                    firstPageUrl:
+                      type: string
+                      example: "/?page=1"
+                    lastPageUrl:
+                      type: string
+                      example: "/?page=1"
+                    nextPageUrl:
+                      type: string
+                      nullable: true
+                      example: "/?page=1"
+                    previousPageUrl:
+                      type: string
+                      nullable: true
+                      example: null
+
+                data:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: "Notebook"
+                      amount:
+                        type: number
+                        example: 3500
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T15:08:52.000+00:00"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-14T14:32:09.000+00:00"
+    post:
+      tags: [Products]
+      summary: Cria um novo produto (Apenas MANAGER/FINANCE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Notebook"
+                amount:
+                  type: integer
+                  example: 3500
+      responses:
+        '201':
+          description: Produto criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Produto criado com sucesso'
+                  product:
+                    type: object
+                    properties: 
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: 'Notebook'
+                      amount:
+                        type: number
+                        example: 3500
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T15:08:52.000+00:00"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-14T14:32:09.000+00:00"
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+  /products/{id}:
+    get:
+      tags: [Products]
+      summary: Retorna um produto específico
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Produto encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  name:
+                    type: string
+                    example: 'Notebook'
+                  amount:
+                    type: number
+                    example: 3500
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2026-03-11T15:08:52.000+00:00"
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    example: "2026-03-14T14:32:09.000+00:00"
+        '404':
+          description: Produto não encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucess:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Produto não encontrado'
+                  code:
+                    type: string
+                    example: 'PRODUCT_NOT_FOUND'
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+
+    patch:
+      tags: [Products]
+      summary: Atualiza um produto (Apenas MANAGER/FINANCE)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                amount:
+                  type: integer
+      responses:
+        '200':
+          description: Produto atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: 'Produto não encontrado'
+                  data:
+                    type: object
+                    properties: 
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: 'Notebook'
+                      amount:
+                        type: number
+                        example: 3500
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T15:08:52.000+00:00"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-14T14:32:09.000+00:00"
+
+        '404':
+          description: Produto não encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucess:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Produto não encontrado'
+                  code:
+                    type: string
+                    example: 'PRODUCT_NOT_FOUND'
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+    delete:
+      tags: [Products]
+      summary: Deleta um produto (Apenas MANAGER/FINANCE)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Produto deletado
+        '404':
+          description: Produto não encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sucess:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: 'Produto não encontrado'
+                  code:
+                    type: string
+                    example: 'PRODUCT_NOT_FOUND'
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+
+  # ------------------------- USERS ------------------------
+  /users:
+    get:
+      tags: [Users]
+      summary: Lista todos os usuários (Apenas MANAGER)
+      parameters:
+      - name: page
+        in: query
+        description: Número da página atual
+        required: false
+        schema:
+          type: integer
+          default: 1
+          example: 1
+      - name: limit
+        in: query
+        description: Quantidade de itens por página
+        required: false
+        schema:
+          type: integer
+          default: 10
+          example: 20
+      responses:
+        '200':
+          description: Lista paginada de usuários (Apenas MANAGER)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 3
+                      perPage:
+                        type: integer
+                        example: 10
+                      currentPage:
+                        type: integer
+                        example: 1
+                      lastPage:
+                        type: integer
+                        example: 1
+                      firstPage:
+                        type: integer
+                        example: 1
+                      firstPageUrl:
+                        type: string
+                        example: "/?page=1"
+                      lastPageUrl:
+                        type: string
+                        example: "/?page=1"
+                      nextPageUrl:
+                        type: string
+                        nullable: true
+                        example: null
+                      previousPageUrl:
+                        type: string
+                        nullable: true
+                        example: null
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 1
+                        email:
+                          type: string
+                          example: "maria.silva@exemplo.com"
+                        role:
+                          type: string
+                          example: "ADMIN"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2026-03-10T08:30:00.000+00:00"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2026-03-10T08:30:00.000+00:00"
+    post:
+      tags: [Users]
+      summary: Cria um novo usuário (Apenas MANAGER)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: "novo@test.com"
+                password:
+                  type: string
+                  example: "123456"
+                role:
+                  type: string
+                  example: "FINANCE"
+      responses:
+        '201':
+          description: Usuário criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Usuário criado com sucesso !"
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 15
+                      email:
+                        type: string
+                        example: "novo.colaborador@empresa.com"
+                      role:
+                        type: string
+                        example: "USER"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-14T17:50:18.053+00:00"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-14T17:50:18.053+00:00"
+        '409': 
+          description: Erro de regra de negócio (Ex. Email já cadastrado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Email duplicados"
+                  code:
+                    type: string
+                    example: "EMAIL_ALREADY_EXISTS"
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: Retorna um usuário específico (Apenas MANAGER)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Usuário encontrado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Usuario encontrado"
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      email:
+                        type: string
+                        example: "admin@betalent.com"
+                      role:
+                        type: string
+                        example: "ADMIN"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T16:12:38.000+00:00"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T16:12:38.000+00:00"
+        '404':
+          description: Usuário não encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Usuário não encontrado"
+                  code:
+                    type: string
+                    example: "USER_NOT_FOUND"
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+    put:
+      tags: [Users]
+      summary: Atualiza um usuário (Apenas MANAGER)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  example: "ADMIN"
+      responses:
+        '200':
+          description: Usuário atualizado
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+    delete:
+      tags: [Users]
+      summary: Deleta um usuário (Apenas MANAGER)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Usuário deletado
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+
+  # ----------------------- GATEWAYS -----------------------
+  /gateways:
+    get:
+      tags: [Gateways]
+      summary: Lista os gateways ordenados por prioridade (Apenas ADMIN)
+      parameters:
+      - name: page
+        in: query
+        description: Número da página atual
+        required: false
+        schema:
+          type: integer
+          default: 1
+          example: 1
+      - name: limit
+        in: query
+        description: Quantidade de itens por página
+        required: false
+        schema:
+          type: integer
+          default: 10
+          example: 20
+      responses:
+        '200':
+          description: Lista paginada de gateways ordenados por prioridade (Apenas ADMIN)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 2
+                      perPage:
+                        type: integer
+                        example: 10
+                      currentPage:
+                        type: integer
+                        example: 1
+                      lastPage:
+                        type: integer
+                        example: 1
+                      firstPage:
+                        type: integer
+                        example: 1
+                      firstPageUrl:
+                        type: string
+                        example: "/?page=1"
+                      lastPageUrl:
+                        type: string
+                        example: "/?page=1"
+                      nextPageUrl:
+                        type: string
+                        nullable: true
+                        example: null
+                      previousPageUrl:
+                        type: string
+                        nullable: true
+                        example: null
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 2
+                        name:
+                          type: string
+                          example: "Gateway 2"
+                        isActive:
+                          type: integer
+                          description: "1 para Ativo, 0 para Inativo"
+                          example: 1
+                        priority:
+                          type: integer
+                          example: 1
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2026-03-11T15:08:52.000+00:00"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2026-03-14T15:19:44.000+00:00"
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+  /gateways/{id}/status:
+    post:
+      tags: [Gateways]
+      summary: Ativa ou desativa um gateway (Apenas ADMIN)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isActive:
+                  type: boolean
+                  example: false
+      responses:
+        '200':
+          description: Status do gateway atualizado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "O gateway: 'Gateway 1' foi desativado"
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: "Gateway 1"
+                      isActive:
+                        type: boolean
+                        example: false
+                      priority:
+                        type: integer
+                        example: 2
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T15:08:52.000+00:00"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-14T15:19:52.254+00:00"
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+        '404':
+          description: Gateway não encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Gateway não encontrado"
+                  code:
+                    type: string
+                    example: "GATEWAY_NOT_FOUND"
+
+  /gateways/{id}/priority:
+    post:
+      tags: [Gateways]
+      summary: Altera a prioridade do gateway no Fallback (Apenas ADMIN)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                priority:
+                  type: integer
+                  example: 1
+      responses:
+        '200':
+          description: Prioridade do gateway atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "A prioridade do Gateway 1 foi alterada para 1."
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: "Gateway 1"
+                      isActive:
+                        type: integer
+                        example: 1
+                      priority:
+                        type: integer
+                        example: 1
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T15:08:52.000+00:00"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-14T18:26:10.094+00:00"
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+        '403':
+          description: Acesso negado por falta de permissão (Restrição RBAC)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Acesso negado. O seu cargo não tem permissão para realizar esta ação."
+        '404':
+          description: Gateway não encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Gateway não encontrado"
+                  code:
+                    type: string
+                    example: "GATEWAY_NOT_FOUND"
+
+  # ----------------------- CLIENTS ------------------------
+  /clients:
+    get:
+      tags: [Clients]
+      summary: Lista todos os clientes
+      parameters:
+      - name: page
+        in: query
+        description: Número da página atual
+        required: false
+        schema:
+          type: integer
+          default: 1
+          example: 1
+      - name: limit
+        in: query
+        description: Quantidade de itens por página
+        required: false
+        schema:
+          type: integer
+          default: 10
+          example: 20
+      responses:
+        '200':
+          description: Lista paginada de clientes com suas transações
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+
+                  meta:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 5
+                      perPage:
+                        type: integer
+                        example: 10
+                      currentPage:
+                        type: integer
+                        example: 1
+                      lastPage:
+                        type: integer
+                        example: 1
+                      firstPage:
+                        type: integer
+                        example: 1
+                      firstPageUrl:
+                        type: string
+                        example: "/?page=1"
+                      lastPageUrl:
+                        type: string
+                        example: "/?page=1"
+                      nextPageUrl:
+                        type: string
+                        nullable: true
+                        example: null
+                      previousPageUrl:
+                        type: string
+                        nullable: true
+                        example: null
+
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+
+                        id:
+                          type: integer
+                          example: 1
+
+                        name:
+                          type: string
+                          example: "João Testador"
+
+                        email:
+                          type: string
+                          example: "joao@email.com"
+
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2026-03-11T15:10:23.000+00:00"
+
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2026-03-11T15:10:23.000+00:00"
+
+                        transactions:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+
+                              id:
+                                type: integer
+                                example: 1
+
+                              clientId:
+                                type: integer
+                                example: 1
+
+                              gatewayId:
+                                type: integer
+                                nullable: true
+                                example: 1
+
+                              externalId:
+                                type: string
+                                nullable: true
+                                example: "92312d28-d74b-4a83-b225-0c87d082cdcb"
+
+                              status:
+                                type: string
+                                enum: [PAID, FAILED, REFUNDED]
+                                example: "PAID"
+
+                              amount:
+                                type: integer
+                                example: 350000
+
+                              cardLastNumbers:
+                                type: string
+                                example: "6063"
+
+                              createdAt:
+                                type: string
+                                format: date-time
+                                example: "2026-03-13T14:39:49.000+00:00"
+
+                              updatedAt:
+                                type: string
+                                format: date-time
+                                example: "2026-03-13T14:39:49.000+00:00"
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"
+
+  /clients/{id}:
+    get:
+      tags: [Clients]
+      summary: Busca um cliente pelo ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Cliente encontrado com suas transações
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+
+                      id:
+                        type: integer
+                        example: 3
+
+                      name:
+                        type: string
+                        example: "João Sem Limite"
+
+                      email:
+                        type: string
+                        example: "joao3@email.com"
+
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T15:26:22.000+00:00"
+
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2026-03-11T15:26:22.000+00:00"
+
+                      transactions:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+
+                            id:
+                              type: integer
+                              example: 4
+
+                            clientId:
+                              type: integer
+                              example: 3
+
+                            gatewayId:
+                              type: integer
+                              nullable: true
+                              example: 2
+
+                            externalId:
+                              type: string
+                              nullable: true
+                              example: "0c82eeab-431e-4e12-a38d-758aba38360d"
+
+                            status:
+                              type: string
+                              enum: [PAID, FAILED, REFUNDED]
+                              example: "PAID"
+
+                            amount:
+                              type: integer
+                              example: 350000
+
+                            cardLastNumbers:
+                              type: string
+                              example: "6063"
+
+                            createdAt:
+                              type: string
+                              format: date-time
+                              example: "2026-03-11T15:26:23.000+00:00"
+
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              example: "2026-03-11T15:26:23.000+00:00"
+        '404':
+          description: Cliente não encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Cliente não encontrado"
+                  code:
+                    type: string
+                    example: "CLIENT_NOT_FOUND"
+        '401':
+          description: Acesso não autorizado (Token ausente, inválido ou expirado)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: "Unauthorized access"

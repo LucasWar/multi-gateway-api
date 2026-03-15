@@ -48,7 +48,7 @@ export default class ProductsController {
   public async destroy({ params, response }: HttpContext) {
     await this.ptodutoService.delete(params.id)
 
-    return response.noContent({
+    return response.ok({
       success: true,
       message: 'Produto deletado com sucesso',
     })

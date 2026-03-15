@@ -8,7 +8,6 @@ import { ClientService } from './client_service.ts'
 import { GatewayService } from './gateway_service.ts'
 import type Gateway from '#models/gateway'
 import Database from '@adonisjs/lucid/services/db'
-import type { ServiceResponse } from '../contracts/service_response.ts'
 import AppException from '#exceptions/app_exception'
 import { ErrorCode } from '../enum/error_code_enum.ts'
 
@@ -111,25 +110,18 @@ export class TransactionService {
     return transaction
   }
 
-  async findUniqueById(id: number): Promise<ServiceResponse<Transaction>> {
+  async findUniqueById(id: number) {
     const transaction = await Transaction.find(id)
     if (!transaction) {
-      return {
-        success: false,
-        message: 'Compra não encontrado',
-        statusCode: 404,
-      }
+      throw new AppException('Compra não encontrada', 404, ErrorCode.TRANSACTION_NOT_FOUND)
     }
 
     await transaction.load('gateway')
 
-    return {
-      success: true,
-      data: transaction,
-    }
+    return transaction
   }
 
-  public async findMany(): Promise<ServiceResponse<Transaction[]>> {
+  public async findMany(page: number, limit: number) {
     const transactions = await Transaction.query()
       .preload('client')
       .preload('gateway')
@@ -137,8 +129,9 @@ export class TransactionService {
         itemsQuery.preload('product')
       })
       .orderBy('createdAt', 'desc')
+      .paginate(page, limit)
 
-    return { success: true, data: transactions }
+    return transactions
   }
 
   private calcTotalAmount(products: ProductInterface[], payload: CheckoutPayload) {

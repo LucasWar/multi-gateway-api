@@ -22,12 +22,12 @@ Simula uma plataforma capaz de processar compras utilizando <b>múltiplos gatewa
 ---
 
 <h2>📚 Sumário</h2>
-
 <ul>
 <li><a href="#visao">Visão Geral</a></li>
 <li><a href="#tech">Tecnologias</a></li>
 <li><a href="#arquitetura">Arquitetura</a></li>
 <li><a href="#fluxo">Fluxo de Pagamento</a></li>
+<li><a href="#docs">Documentação da API</a></li>
 <li><a href="#quick">Quick Start</a></li>
 <li><a href="#install">Instalação Completa</a></li>
 <li><a href="#seeds">Seeds</a></li>
@@ -183,6 +183,22 @@ Esse mecanismo garante <b>maior resiliência no processamento de pagamentos</b>.
 
 ---
 
+<h2 id="docs">📖 Documentação da API</h2>
+
+<p>
+A API foi rigorosamente documentada para garantir a melhor experiência de integração e avaliação, cobrindo todos os cenários de sucesso, paginação, falhas de autenticação e regras de negócio.
+</p>
+
+<ul>
+<li>
+  <b>Swagger / OpenAPI:</b> O mapeamento completo das rotas e contratos de dados (Requests e Responses) encontra-se no arquivo <code>swagger.yaml</code> na raiz do projeto. Para visualizar a interface interativa, copie o conteúdo do arquivo e cole no <a href="https://editor.swagger.io/" target="_blank">Swagger Editor</a>.
+</li>
+<li>
+  <b>Collection do Insomnia:</b> Para realizar testes práticos localmente, basta importar o arquivo <code>insomnia_collection.yaml</code> (também na raiz do projeto) diretamente no seu aplicativo Insomnia. Todas as rotas já estão pré-configuradas.
+</li>
+</ul>
+
+---
 <h2 id="quick">🚀 Quick Start</h2>
 
 <pre>
@@ -210,8 +226,8 @@ http://localhost:3333
 <h3>1. Clonar o repositório</h3>
 
 <pre>
-git clone &lt;repo-url&gt;
-cd payment-api
+git clone &lt;https://github.com/LucasWar/multi-gateway-api.git&gt;
+cd multi-gateway-api
 </pre>
 
 <h3>2. Instalar dependências</h3>
@@ -453,16 +469,24 @@ Os testes utilizam <b>transações globais</b> para garantir isolamento do banco
 
 ---
 
-<h2 id="architecture-decisions">🧠 Decisões de Arquitetura</h2>
+<h2 id="architecture-decisions">🧠 Decisões de Arquitetura e Boas Práticas</h2>
 
-<h3>Service Layer</h3>
+<h3>Design Patterns (Strategy Pattern)</h3>
+<p>
+A integração e o failover entre múltiplos gateways de pagamento foram desenhados utilizando o <b>Padrão Strategy</b>. Isso permite que a aplicação alterne o fluxo de pagamento dinamicamente entre os provedores (GatewayFactory) durante o fallback. Além disso, garante que novos gateways possam ser adicionados no futuro sem modificar a lógica principal, respeitando o <b>Open-Closed Principle (OCP)</b> do SOLID.
+</p>
 
-<p>A lógica de negócio foi isolada em services.</p>
+<h3>Paginação e Escalabilidade</h3>
+<p>
+Todas as rotas de listagem (GET) foram implementadas com paginação. O retorno da API segue o padrão ouro do mercado, dividindo o payload em <code>meta</code> (metadados de paginação) e <code>data</code> (registros). Isso protege o Node.js e o banco de dados contra vazamentos de memória (Out of Memory) em tabelas com alto volume de dados, além de facilitar a integração com o Frontend.
+</p>
 
-<h3>Gateway Factory</h3>
+<h3>Isolamento com Service Layer</h3>
+<p>
+Os Controllers foram mantidos extremamente limpos, atuando apenas como pontes de requisição e resposta HTTP. Toda a lógica de negócios (como as regras de reembolso e fallback) foi isolada na <b>Camada de Services</b>, facilitando a reutilização de código e a escrita de testes unitários.
+</p>
 
-<p>Permite adicionar novos gateways sem alterar a lógica principal.</p>
-
-<h3>Transações de Banco</h3>
-
-<p>Garantem consistência ao criar transações e itens da transação.</p>
+<h3>Transações de Banco de Dados (ACID)</h3>
+<p>
+A criação de pedidos e seus respectivos itens de carrinho ocorre dentro de uma <i>Database Transaction</i>. Isso garante que, caso ocorra alguma falha no meio do processo de inserção dos itens, o sistema realize um <i>rollback</i> automático, impedindo a criação de transações órfãs ou inconsistentes no banco.
+</p>

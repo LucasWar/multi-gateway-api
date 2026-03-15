@@ -5,11 +5,11 @@ import AppException from '#exceptions/app_exception'
 import { ErrorCode } from '../enum/error_code_enum.ts'
 
 export class UserService {
-  async findProductById(id: number) {
+  async findUserById(id: number) {
     const user = await User.find(id)
 
     if (!user) {
-      throw new AppException('Produto não encontrado', 404, ErrorCode.USER_NOT_FOUND)
+      throw new AppException('Usuário não encontrado', 404, ErrorCode.USER_NOT_FOUND)
     }
 
     return user
@@ -26,7 +26,7 @@ export class UserService {
   }
 
   async update(payload: UpdateUser, id: number) {
-    const user = await this.findProductById(id)
+    const user = await this.findUserById(id)
 
     if (payload.password) {
       payload.password = await hash.make(payload.password)
@@ -44,7 +44,7 @@ export class UserService {
   }
 
   async delete(id: number) {
-    const user = await this.findProductById(id)
+    const user = await this.findUserById(id)
 
     await user.delete()
   }

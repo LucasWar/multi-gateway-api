@@ -1,17 +1,17 @@
 import Client from '#models/client'
-import { Exception } from '@adonisjs/core/exceptions'
 import type { ClientPayload } from '../interfaces/clients_interface.ts'
-import { type ServiceResponse } from '../contracts/service_response.ts'
+import AppException from '#exceptions/app_exception'
+import { ErrorCode } from '../enum/error_code_enum.ts'
 
 export class ClientService {
-  async findMany() {
-    return await Client.query().preload('transactions')
+  async findMany(page: number, limit: number) {
+    return await Client.query().preload('transactions').paginate(page, limit)
   }
 
-  async findUniqueById(id: number): Promise<ServiceResponse<Client>> {
+  async findUniqueById(id: number) {
     const client = await Client.find(id)
     if (!client) {
-      throw new Exception('Cliente não encontrado', { status: 404 })
+      throw new AppException('Cliente não encontrado', 404, ErrorCode.CLIENT_NOT_FOUND)
     }
 
     await client.load('transactions')

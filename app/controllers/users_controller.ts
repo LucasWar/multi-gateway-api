@@ -1,13 +1,13 @@
 import User from '#models/user'
 import { UserService } from '#services/users_service'
-import { userSchema } from '#validators/user'
+import { userSchema, userUpdateSchema } from '#validators/user'
 import type { HttpContext } from '@adonisjs/core/http'
 
 export default class UsersController {
   private userService = new UserService()
 
   public async show({ params, response }: HttpContext) {
-    const user = await this.userService.findProductById(params.id)
+    const user = await this.userService.findUserById(params.id)
 
     return response.ok({
       success: true,
@@ -44,7 +44,7 @@ export default class UsersController {
   }
 
   public async update({ response, params, request }: HttpContext) {
-    const payload = await request.validateUsing(userSchema)
+    const payload = await request.validateUsing(userUpdateSchema)
 
     const user = await this.userService.update(payload, params.id)
 

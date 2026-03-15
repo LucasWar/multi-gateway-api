@@ -1,6 +1,5 @@
 import Gateway from '#models/gateway'
 import type { GatewayPriority, GatewayStatus } from '../interfaces/gateways_interface.ts'
-import type { ServiceResponse } from '../contracts/service_response.ts'
 import AppException from '#exceptions/app_exception'
 import { ErrorCode } from '../enum/error_code_enum.ts'
 
@@ -15,7 +14,7 @@ export class GatewayService {
     return gateway
   }
 
-  async changeStatus(payload: GatewayStatus, id: number): Promise<ServiceResponse<Gateway>> {
+  async changeStatus(payload: GatewayStatus, id: number) {
     const gateway = await this.findUniqueById(id)
 
     gateway.isActive = payload.isActive
@@ -31,7 +30,7 @@ export class GatewayService {
     }
   }
 
-  async changePriority(payload: GatewayPriority, id: number): Promise<ServiceResponse<Gateway>> {
+  async changePriority(payload: GatewayPriority, id: number) {
     const gateway = await this.findUniqueById(id)
 
     const oldPriority = gateway.priority

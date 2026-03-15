@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { checkoutSchema } from '#validators/transactions'
 import { TransactionService } from '#services/transactions_service'
+import { ErrorCode } from '../enum/error_code_enum.ts'
 
 export default class TransactionsController {
   private transactionService = new TransactionService()
@@ -10,6 +11,15 @@ export default class TransactionsController {
 
     const transaction = await this.transactionService.processCheckout(payload)
 
+    if (transaction.status === 'FAILED') {
+      return response.created({
+        success: false,
+        message: 'Pagamento recusado em todos os gateways.',
+        code: ErrorCode.PAYMENT_FAILED,
+        data: transaction,
+      })
+    }
+
     return response.created({
       success: true,
       message: 'Trasação criada com sucesso',
@@ -17,17 +27,13 @@ export default class TransactionsController {
     })
   }
 
-  public async index({ response }: HttpContext) {
-    const result = await this.transactionService.findMany()
+  public async index({ response, request }: HttpContext) {
+    const page = request.input('page', 1) ?? 1
+    const limit = request.input('limit', 10) ?? 10
 
-    if (result.success === false) {
-      const { statusCode, ...content } = result
-      return response.status(statusCode ?? 400).json({
-        ...content,
-      })
-    }
+    const transactions = await this.transactionService.findMany(page, limit)
 
-    return response.ok(result)
+    return response.ok(transactions)
   }
 
   public async refund({ response, request }: HttpContext) {
@@ -35,21 +41,17 @@ export default class TransactionsController {
 
     return response.ok({
       success: true,
-      message: 'Transação criada com sucesso',
+      message: 'Transação estornada com sucesso',
       data: transaction,
     })
   }
 
   async findUnique({ request, response }: HttpContext) {
-    const result = await this.transactionService.findUniqueById(request.param('id'))
+    const transaction = await this.transactionService.findUniqueById(request.param('id'))
 
-    if (result.success === false) {
-      const { statusCode, ...content } = result
-      return response.status(statusCode ?? 400).json({
-        ...content,
-      })
-    }
-
-    return response.ok(result)
+    return response.ok({
+      success: true,
+      data: transaction,
+    })
   }
 }

@@ -167,10 +167,10 @@ export interface Registry {
     methods: ["PUT","PATCH"]
     pattern: '/users/:id'
     types: {
-      body: ExtractBody<InferInput<(typeof import('#validators/user').userSchema)>>
+      body: ExtractBody<InferInput<(typeof import('#validators/user').userUpdateSchema)>>
       paramsTuple: [ParamValue]
       params: { id: ParamValue }
-      query: ExtractQuery<InferInput<(typeof import('#validators/user').userSchema)>>
+      query: ExtractQuery<InferInput<(typeof import('#validators/user').userUpdateSchema)>>
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/users_controller').default['update']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/users_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
